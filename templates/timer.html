@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Timer — StudyPlan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Study Timer</h1>
+  <p class="subtitle">Stay focused with timed sessions</p>
+</div>
+
+<div class="timer-layout">
+  <div class="timer-card">
+    <div class="timer-mode-tabs">
+      <button class="mode-tab active" data-mode="pomodoro" data-minutes="25">Pomodoro</button>
+      <button class="mode-tab" data-mode="short" data-minutes="5">Short Break</button>
+      <button class="mode-tab" data-mode="long" data-minutes="15">Long Break</button>
+      <button class="mode-tab" data-mode="custom" data-minutes="0">Custom</button>
+    </div>
+
+    <div id="custom-duration" style="display:none; margin-bottom:1rem">
+      <label>Duration (minutes)</label>
+      <input type="number" id="custom-minutes" value="30" min="1" max="480" class="custom-input" />
+    </div>
+
+    <div class="timer-display" id="timer-display">25:00</div>
+
+    <div class="timer-progress-wrap">
+      <div class="timer-progress-bar">
+        <div class="timer-progress-fill" id="progress-fill"></div>
+      </div>
+    </div>
+
+    <div class="timer-controls">
+      <button class="btn btn-lg btn-primary" id="start-btn" onclick="startTimer()">▶ Start</button>
+      <button class="btn btn-lg btn-outline" id="pause-btn" onclick="pauseTimer()" style="display:none">⏸ Pause</button>
+      <button class="btn btn-lg btn-outline" onclick="resetTimer()">↺ Reset</button>
+    </div>
+
+    <div class="session-link-section">
+      <label>Link to session (optional)</label>
+      <select id="linked-session">
+        <option value="">— No session linked —</option>
+        {% for s in pending_sessions %}
+        <option value="{{ s.id }}">{{ s.subject_name }}: {{ s.title }} ({{ s.planned_minutes }}min)</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div id="timer-done-msg" style="display:none" class="done-message">
+      🎉 Time's up! Great work!
+      <div style="margin-top:0.5rem">
+        <button class="btn btn-success" onclick="logAndReset()">Log Time & Done</button>
+        <button class="btn btn-outline" onclick="resetTimer()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="timer-sidebar">
+    <div class="card">
+      <h3>Pending Sessions</h3>
+      {% if pending_sessions %}
+      <ul class="pending-list">
+        {% for s in pending_sessions %}
+        <li>
+          <span class="tag" style="background: {{ s.subject_color }}22; color: {{ s.subject_color }}">{{ s.subject_name }}</span>
+          {{ s.title }}
+          <span class="meta-item">{{ s.scheduled_date }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="muted">No pending sessions.</p>
+      {% endif %}
+    </div>
+
+    <div class="card" style="margin-top: 1rem">
+      <h3>Today's Tips</h3>
+      <ul class="tips-list">
+        <li>📵 Silence your phone</li>
+        <li>💧 Keep water nearby</li>
+        <li>🪟 Good lighting helps focus</li>
+        <li>📝 Write goals before starting</li>
+        <li>🧠 Review notes after the session</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<script>
+  const TIMER_MINUTES = {
+    pomodoro: 25,
+    short: 5,
+    long: 15,
+    custom: 30
+  };
+
+  let currentMode = "pomodoro";
+  let totalSeconds = 25 * 60;
+  let remainingSeconds = totalSeconds;
+  let timerInterval = null;
+  let running = false;
+  let elapsedMinutes = 0;
+
+  const display = document.getElementById("timer-display");
+  const progressFill = document.getElementById("progress-fill");
+  const startBtn = document.getElementById("start-btn");
+  const pauseBtn = document.getElementById("pause-btn");
+  const doneMsg = document.getElementById("timer-done-msg");
+  const customDiv = document.getElementById("custom-duration");
+  const customInput = document.getElementById("custom-minutes");
+
+  document.querySelectorAll(".mode-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      if (running) return;
+      document.querySelectorAll(".mode-tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentMode = tab.dataset.mode;
+      customDiv.style.display = currentMode === "custom" ? "block" : "none";
+      const mins = currentMode === "custom"
+        ? parseInt(customInput.value) || 30
+        : parseInt(tab.dataset.minutes);
+      totalSeconds = mins * 60;
+      remainingSeconds = totalSeconds;
+      elapsedMinutes = 0;
+      updateDisplay();
+      doneMsg.style.display = "none";
+    });
+  });
+
+  customInput.addEventListener("change", () => {
+    if (running) return;
+    const mins = parseInt(customInput.value) || 30;
+    totalSeconds = mins * 60;
+    remainingSeconds = totalSeconds;
+    updateDisplay();
+  });
+
+  function updateDisplay() {
+    const m = Math.floor(remainingSeconds / 60).toString().padStart(2, "0");
+    const s = (remainingSeconds % 60).toString().padStart(2, "0");
+    display.textContent = `${m}:${s}`;
+    const pct = totalSeconds > 0 ? ((totalSeconds - remainingSeconds) / totalSeconds) * 100 : 0;
+    progressFill.style.width = pct + "%";
+    document.title = `${m}:${s} — StudyPlan`;
+  }
+
+  function startTimer() {
+    if (running) return;
+    running = true;
+    startBtn.style.display = "none";
+    pauseBtn.style.display = "inline-block";
+    doneMsg.style.display = "none";
+
+    timerInterval = setInterval(() => {
+      if (remainingSeconds <= 0) {
+        clearInterval(timerInterval);
+        running = false;
+        timerDone();
+        return;
+      }
+      remainingSeconds--;
+      updateDisplay();
+    }, 1000);
+  }
+
+  function pauseTimer() {
+    if (!running) return;
+    clearInterval(timerInterval);
+    running = false;
+    startBtn.style.display = "inline-block";
+    pauseBtn.style.display = "none";
+    elapsedMinutes = Math.floor((totalSeconds - remainingSeconds) / 60);
+  }
+
+  function resetTimer() {
+    clearInterval(timerInterval);
+    running = false;
+    const mins = currentMode === "custom"
+      ? parseInt(customInput.value) || 30
+      : TIMER_MINUTES[currentMode];
+    totalSeconds = mins * 60;
+    remainingSeconds = totalSeconds;
+    elapsedMinutes = 0;
+    startBtn.style.display = "inline-block";
+    pauseBtn.style.display = "none";
+    doneMsg.style.display = "none";
+    updateDisplay();
+    document.title = "Timer — StudyPlan";
+  }
+
+  function timerDone() {
+    elapsedMinutes = Math.floor(totalSeconds / 60);
+    startBtn.style.display = "inline-block";
+    pauseBtn.style.display = "none";
+    doneMsg.style.display = "block";
+    if (Notification.permission === "granted") {
+      new Notification("⏱ StudyPlan", { body: "Time's up! Great work!" });
+    }
+    playBeep();
+  }
+
+  function playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [0, 0.3, 0.6].forEach(delay => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0.3, ctx.currentTime + delay);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.3);
+        osc.start(ctx.currentTime + delay);
+        osc.stop(ctx.currentTime + delay + 0.3);
+      });
+    } catch (e) {}
+  }
+
+  function logAndReset() {
+    const sessionId = document.getElementById("linked-session").value;
+    if (sessionId && elapsedMinutes > 0) {
+      fetch(`/api/session/${sessionId}/log-time`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ minutes: elapsedMinutes })
+      }).then(() => {
+        resetTimer();
+        alert(`Logged ${elapsedMinutes} minutes to your session!`);
+      });
+    } else {
+      resetTimer();
+    }
+  }
+
+  if (Notification.permission === "default") {
+    Notification.requestPermission();
+  }
+
+  updateDisplay();
+</script>
+{% endblock %}

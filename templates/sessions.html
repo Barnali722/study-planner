@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Sessions — StudyPlan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Study Sessions</h1>
+  <a href="{{ url_for('export_sessions') }}" class="btn btn-outline">⬇ Download CSV</a>
+</div>
+
+<div class="card form-card">
+  <h2>Schedule Session</h2>
+  <form method="post" class="session-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Subject</label>
+        <select name="subject_id" required>
+          <option value="">Select subject…</option>
+          {% for sub in subjects %}
+          <option value="{{ sub.id }}">{{ sub.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Title</label>
+        <input type="text" name="title" placeholder="e.g. Chapter 3 review" required />
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" name="scheduled_date" required />
+      </div>
+      <div class="form-group">
+        <label>Planned Duration (minutes)</label>
+        <input type="number" name="planned_minutes" value="25" min="5" max="480" />
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea name="notes" placeholder="Topics to cover, goals, etc." rows="2"></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary">Schedule Session</button>
+  </form>
+</div>
+
+<div class="filter-bar">
+  <form method="get" class="filter-form">
+    <input type="date" name="date" value="{{ filter_date }}" />
+    <select name="subject">
+      <option value="">All Subjects</option>
+      {% for sub in subjects %}
+      <option value="{{ sub.id }}" {% if filter_subject == sub.id|string %}selected{% endif %}>{{ sub.name }}</option>
+      {% endfor %}
+    </select>
+    <select name="status">
+      <option value="" {% if not filter_status %}selected{% endif %}>All Status</option>
+      <option value="pending" {% if filter_status == 'pending' %}selected{% endif %}>Pending</option>
+      <option value="completed" {% if filter_status == 'completed' %}selected{% endif %}>Completed</option>
+    </select>
+    <button type="submit" class="btn btn-outline">Filter</button>
+    <a href="{{ url_for('sessions') }}" class="btn btn-outline">Reset</a>
+  </form>
+</div>
+
+{% if sessions %}
+<div class="session-list">
+  {% for s in sessions %}
+  <div class="session-card {% if s.completed %}completed{% endif %}">
+    <div class="session-color-bar" style="background: {{ s.subject_color }}"></div>
+    <div class="session-info">
+      <div class="session-title">
+        {{ s.title }}
+        {% if s.completed %}<span class="badge badge-success">✓ Done</span>{% endif %}
+      </div>
+      <div class="session-meta">
+        <span class="tag" style="background: {{ s.subject_color }}22; color: {{ s.subject_color }}">{{ s.subject_name }}</span>
+        <span class="meta-item">📅 {{ s.scheduled_date }}</span>
+        <span class="meta-item">⏱ {{ s.planned_minutes }} min planned</span>
+        {% if s.actual_minutes %}<span class="meta-item">✅ {{ s.actual_minutes }} min done</span>{% endif %}
+      </div>
+      {% if s.notes %}<div class="session-notes">{{ s.notes }}</div>{% endif %}
+    </div>
+    <div class="session-actions">
+      {% if not s.completed %}
+      <form method="post" action="{{ url_for('complete_session', session_id=s.id) }}" class="complete-form">
+        <input type="number" name="actual_minutes" placeholder="Min spent" min="1" class="small-input" />
+        <button type="submit" class="btn btn-sm btn-success">✓ Done</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('delete_session', session_id=s.id) }}"
+            onsubmit="return confirm('Delete this session?')">
+        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📝</div>
+  <p>No sessions found. Schedule one above!</p>
+</div>
+{% endif %}
+{% endblock %}

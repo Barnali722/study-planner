@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Study Planner{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-brand">
+      <span class="nav-icon">📚</span>
+      <span class="nav-title">StudyPlan</span>
+    </div>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}">Dashboard</a></li>
+      <li><a href="{{ url_for('subjects') }}" class="{% if request.endpoint == 'subjects' %}active{% endif %}">Subjects</a></li>
+      <li><a href="{{ url_for('sessions') }}" class="{% if request.endpoint == 'sessions' %}active{% endif %}">Sessions</a></li>
+      <li><a href="{{ url_for('timer') }}" class="{% if request.endpoint == 'timer' %}active{% endif %}">⏱ Timer</a></li>
+    </ul>
+  </nav>
+
+  <main class="main-content">
+    {% block content %}{% endblock %}
+  </main>
+
+  <script src="{{ url_for('static', filename='timer.js') }}"></script>
+</body>
+</html>

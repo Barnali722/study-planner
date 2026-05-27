@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — StudyPlan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Dashboard</h1>
+  <p class="subtitle">{{ today }}</p>
+</div>
+
+<div class="stats-row">
+  <div class="stat-card">
+    <div class="stat-value">{{ completed_today }}</div>
+    <div class="stat-label">Sessions Today</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ total_minutes_today }}</div>
+    <div class="stat-label">Minutes Today</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ total_sessions }}</div>
+    <div class="stat-label">Total Completed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">{{ subjects | length }}</div>
+    <div class="stat-label">Subjects</div>
+  </div>
+</div>
+
+<div class="section-header">
+  <h2>Upcoming Sessions</h2>
+  <a href="{{ url_for('sessions') }}" class="btn btn-outline">View All</a>
+</div>
+
+{% if upcoming %}
+<div class="session-list">
+  {% for s in upcoming %}
+  <div class="session-card">
+    <div class="session-color-bar" style="background: {{ s.subject_color }}"></div>
+    <div class="session-info">
+      <div class="session-title">{{ s.title }}</div>
+      <div class="session-meta">
+        <span class="tag" style="background: {{ s.subject_color }}22; color: {{ s.subject_color }}">{{ s.subject_name }}</span>
+        <span class="meta-item">📅 {{ s.scheduled_date }}</span>
+        <span class="meta-item">⏱ {{ s.planned_minutes }} min</span>
+      </div>
+      {% if s.notes %}<div class="session-notes">{{ s.notes }}</div>{% endif %}
+    </div>
+    <div class="session-actions">
+      <a href="{{ url_for('timer') }}" class="btn btn-sm btn-primary">Start</a>
+      <form method="post" action="{{ url_for('complete_session', session_id=s.id) }}" style="display:inline">
+        <input type="hidden" name="actual_minutes" value="{{ s.planned_minutes }}" />
+        <button type="submit" class="btn btn-sm btn-success">✓ Done</button>
+      </form>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">🎉</div>
+  <p>No upcoming sessions! <a href="{{ url_for('sessions') }}">Schedule one now</a></p>
+</div>
+{% endif %}
+
+{% if subjects %}
+<div class="section-header" style="margin-top: 2rem">
+  <h2>Quick Add Session</h2>
+</div>
+<form method="post" action="{{ url_for('sessions') }}" class="quick-form">
+  <select name="subject_id" required>
+    <option value="">Select subject…</option>
+    {% for sub in subjects %}
+    <option value="{{ sub.id }}">{{ sub.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="text" name="title" placeholder="Session title" required />
+  <input type="date" name="scheduled_date" value="{{ today }}" required />
+  <input type="number" name="planned_minutes" value="25" min="5" max="480" placeholder="Minutes" />
+  <button type="submit" class="btn btn-primary">Add</button>
+</form>
+{% else %}
+<div class="empty-state" style="margin-top:2rem">
+  <div class="empty-icon">📖</div>
+  <p>Start by <a href="{{ url_for('subjects') }}">adding a subject</a> first.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}Subjects — StudyPlan{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1>Subjects</h1>
+  <a href="{{ url_for('export_subjects') }}" class="btn btn-outline">⬇ Download CSV</a>
+</div>
+
+<div class="card form-card">
+  <h2>Add Subject</h2>
+  <form method="post" class="inline-form">
+    <input type="text" name="name" placeholder="Subject name (e.g. Mathematics)" required />
+    <div class="color-field">
+      <label>Color</label>
+      <input type="color" name="color" value="#4f46e5" />
+    </div>
+    <button type="submit" class="btn btn-primary">Add Subject</button>
+  </form>
+</div>
+
+{% if subjects %}
+<div class="subjects-grid">
+  {% for sub in subjects %}
+  <div class="subject-card">
+    <div class="subject-color-dot" style="background: {{ sub.color }}"></div>
+    <div class="subject-info">
+      <div class="subject-name">{{ sub.name }}</div>
+      <div class="subject-meta">{{ sub.session_count }} session{{ 's' if sub.session_count != 1 }}</div>
+    </div>
+    <form method="post" action="{{ url_for('delete_subject', subject_id=sub.id) }}"
+          onsubmit="return confirm('Delete {{ sub.name }}? All its sessions will also be deleted.')">
+      <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon">📚</div>
+  <p>No subjects yet. Add one above to get started!</p>
+</div>
+{% endif %}
+{% endblock %}
